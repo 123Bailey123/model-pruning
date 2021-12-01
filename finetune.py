@@ -20,7 +20,7 @@ class ModifiedVGG16Model(torch.nn.Module):
     def __init__(self):
         super(ModifiedVGG16Model, self).__init__()
 
-        model = models.vgg16(pretrained=True)
+        self.model = models.vgg16(pretrained=True)
         self.features = model.features
 
         for param in self.features.parameters():
@@ -80,7 +80,7 @@ class FilterPrunner:
             self.filter_ranks[activation_index] = \
                 torch.FloatTensor(activation.size(1)).zero_()
 
-            #if args.use_cuda:
+            # if args.use_cuda:
             #    self.filter_ranks[activation_index] = self.filter_ranks[activation_index].cuda()
 
         self.filter_ranks[activation_index] += taylor
@@ -128,22 +128,39 @@ class PrunningFineTuner_VGG16:
     def __init__(self, train_path, test_path, model):
         self.train_data_loader = dataset.loader(train_path)
         self.test_data_loader = dataset.test_loader(test_path)
+        self.infer_data_loader = dataset.infer_loader(test_path)
 
         self.model = model
         self.criterion = torch.nn.CrossEntropyLoss()
         self.prunner = FilterPrunner(self.model)
         self.model.train()
 
+    def infer(self):
+        self.model.eval()
+
+        print("Calculating avg. inference latency...")
+        infer_list = []
+        for i, (batch, label) in enumerate(self.infer_data_loader):
+            # if args.use_cuda:
+            #    batch = batch.cuda()
+            pred_start = time.time()
+            self.model(Variable(batch))
+            pred_end = time.time()
+            infer_list.append((pred_end - pred_start) * 1000)
+            # print("Inference time: " + str((pred_end - pred_start) * 1000) + "ms")
+
+        infer_avg = sum(infer_list) / len(infer_list)
+        print("Avg. inference time after " + str(len(infer_list)) + " iteration(s): " + str(infer_avg) + "ms")
+
     def test(self):
-        return
         self.model.eval()
         correct = 0
         total = 0
 
         for i, (batch, label) in enumerate(self.test_data_loader):
-            if args.use_cuda:
-                batch = batch.cuda()
-            output = model(Variable(batch))
+            # if args.use_cuda:
+            #    batch = batch.cuda()
+            output = self.model(Variable(batch))
             pred = output.data.max(1)[1]
             correct += pred.cpu().eq(label).sum()
             total += label.size(0)
@@ -166,7 +183,7 @@ class PrunningFineTuner_VGG16:
 
     def train_batch(self, optimizer, batch, label, rank_filters):
 
-        #if args.use_cuda:
+        # if args.use_cuda:
         #    batch = batch.cuda()
         #    label = label.cuda()
 
@@ -197,22 +214,23 @@ class PrunningFineTuner_VGG16:
                 filters = filters + module.out_channels
         return filters
 
-    def prune(self):
+    def prune(self, prune_degree):
         # Get the accuracy before prunning
-        self.test()
-        self.model.train()
+        # self.test()
+        # self.model.train()
 
         # Make sure all the layers are trainable
         for param in self.model.features.parameters():
             param.requires_grad = True
 
         number_of_filters = self.total_num_filters()
-        num_filters_to_prune_per_iteration = 2048
-        iterations = int(float(number_of_filters) / num_filters_to_prune_per_iteration)
+        prune_degree_perc = (prune_degree / 100)
+        num_filters_to_prune_per_iteration = int(number_of_filters * prune_degree_perc)
+        # iterations = int(float(number_of_filters) / num_filters_to_prune_per_iteration)
 
-        iterations = int(iterations * 2.0 / 3)
+        iterations = 1
 
-        print("Number of prunning iterations to reduce 67% filters", iterations)
+        print("Reduce " + str(prune_degree) + "% of conv filters: " + str(num_filters_to_prune_per_iteration))
 
         for _ in range(iterations):
             print("Ranking filters.. ")
@@ -224,7 +242,7 @@ class PrunningFineTuner_VGG16:
                     layers_prunned[layer_index] = 0
                 layers_prunned[layer_index] = layers_prunned[layer_index] + 1
             rank_end = time.time()
-            print("Rank time: " + str((rank_end-rank_start)) + "s")
+            print("Rank time: " + str((rank_end - rank_start)) + "s")
             print("Layers that will be prunned", layers_prunned)
             print("Prunning filters.. ")
             prune_start = time.time()
@@ -233,54 +251,18 @@ class PrunningFineTuner_VGG16:
                 model = prune_vgg16_conv_layer(model, layer_index, filter_index, use_cuda=False)
 
             self.model = model
-            #if args.use_cuda:
+            # if args.use_cuda:
             #    self.model = self.model.cuda()
 
             message = str(100 * float(self.total_num_filters()) / number_of_filters) + "%"
             prune_end = time.time()
             print("Prune time: " + str((prune_end - prune_start)) + "s")
             print("Filters prunned", str(message))
-            #self.test()
-            #print("Fine tuning to recover from prunning iteration.")
-            #optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
-            #self.train(optimizer, epoches=10)
+            # self.test()
+            # print("Fine tuning to recover from prunning iteration.")
+            # optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
+            # self.train(optimizer, epoches=10)
 
-        #print("Finished. Going to fine tune the model a bit more")
-        #self.train(optimizer, epoches=15)
-        torch.save(model.state_dict(), "model_prunned")
-
-
-# def get_args():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--train", dest="train", action="store_true")
-#     parser.add_argument("--prune", dest="prune", action="store_true")
-#     parser.add_argument("--train_path", type=str, default="train")
-#     parser.add_argument("--test_path", type=str, default="test")
-#     parser.add_argument('--use-cuda', action='store_true', default=False, help='Use NVIDIA GPU acceleration')
-#     parser.set_defaults(train=False)
-#     parser.set_defaults(prune=False)
-#     args = parser.parse_args()
-#     args.use_cuda = args.use_cuda and torch.cuda.is_available()
-#
-#     return args
-#
-#
-# if __name__ == '__main__':
-#     args = get_args()
-#
-#     if args.train:
-#         model = ModifiedVGG16Model()
-#     elif args.prune:
-#         model = torch.load("model", map_location=lambda storage, loc: storage)
-#
-#     if args.use_cuda:
-#         model = model.cuda()
-#
-#     fine_tuner = PrunningFineTuner_VGG16(args.train_path, args.test_path, model)
-#
-#     if args.train:
-#         fine_tuner.train(epoches=1)
-#         torch.save(model, "model")
-#
-#     elif args.prune:
-#         fine_tuner.prune()
+        # print("Finished. Going to fine tune the model a bit more")
+        # self.train(optimizer, epoches=15)
+        torch.save(model, str("model_pruned_" + str(prune_degree)))
