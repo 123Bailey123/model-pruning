@@ -64,5 +64,5 @@ if __name__ == '__main__':
         fine_tuner.prune(args.prune_degree)
 
     elif args.test:
-        fine_tuner.test()
+        #fine_tuner.test()
         fine_tuner.infer()
