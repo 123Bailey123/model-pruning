@@ -4,7 +4,7 @@
 .idea/inspectionProfiles/profiles_settings.xml
 .idea/misc.xml
 .idea/modules.xml
-.idea/pytorch-pruning.iml
+.idea/model-pruning.iml
 .idea/other.xml
 __pycache__/dataset.cpython-39.pyc
 __pycache__/prune.cpython-39.pyc
