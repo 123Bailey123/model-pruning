@@ -207,7 +207,7 @@ class PrunningFineTuner_VGG16:
             param.requires_grad = True
 
         number_of_filters = self.total_num_filters()
-        num_filters_to_prune_per_iteration = 512
+        num_filters_to_prune_per_iteration = 2048
         iterations = int(float(number_of_filters) / num_filters_to_prune_per_iteration)
 
         iterations = int(iterations * 2.0 / 3)
@@ -240,13 +240,13 @@ class PrunningFineTuner_VGG16:
             prune_end = time.time()
             print("Prune time: " + str((prune_end - prune_start)) + "s")
             print("Filters prunned", str(message))
-            self.test()
-            print("Fine tuning to recover from prunning iteration.")
-            optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
-            self.train(optimizer, epoches=10)
+            #self.test()
+            #print("Fine tuning to recover from prunning iteration.")
+            #optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
+            #self.train(optimizer, epoches=10)
 
-        print("Finished. Going to fine tune the model a bit more")
-        self.train(optimizer, epoches=15)
+        #print("Finished. Going to fine tune the model a bit more")
+        #self.train(optimizer, epoches=15)
         torch.save(model.state_dict(), "model_prunned")
 
 
