@@ -1,7 +1,6 @@
 import torch
 from torch.autograd import Variable
 from torchvision import models
-import cv2
 import sys
 import numpy as np
 import torchvision
@@ -53,6 +52,7 @@ if __name__ == '__main__':
         model = model.cuda()
 
     print(model)
+    print(sys.version)
 
     fine_tuner = finetune.PrunningFineTuner_VGG16(args.train_path, args.test_path, model)
 
