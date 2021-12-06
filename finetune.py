@@ -1,7 +1,6 @@
 import torch
 from torch.autograd import Variable
 from torchvision import models
-import cv2
 import sys
 import numpy as np
 import torchvision
@@ -21,7 +20,7 @@ class ModifiedVGG16Model(torch.nn.Module):
         super(ModifiedVGG16Model, self).__init__()
 
         self.model = models.vgg16(pretrained=True)
-        self.features = model.features
+        self.features = self.model.features
 
         for param in self.features.parameters():
             param.requires_grad = False
