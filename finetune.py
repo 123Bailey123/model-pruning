@@ -13,6 +13,8 @@ import argparse
 from operator import itemgetter
 from heapq import nsmallest
 import time
+#from joblib import Parallel, delayed
+import math
 
 
 class ModifiedVGG16Model(torch.nn.Module):
@@ -67,6 +69,7 @@ class FilterPrunner:
         return self.model.classifier(x.view(x.size(0), -1))
 
     def compute_rank(self, grad):
+        rank_s = time.time()
         activation_index = len(self.activations) - self.grad_index - 1
         activation = self.activations[activation_index]
 
@@ -84,6 +87,8 @@ class FilterPrunner:
 
         self.filter_ranks[activation_index] += taylor
         self.grad_index += 1
+        rank_e = time.time()
+        print(str((rank_e-rank_s)*1000))
 
     def lowest_ranking_filters(self, num):
         data = []
@@ -128,6 +133,9 @@ class PrunningFineTuner_VGG16:
         self.train_data_loader = dataset.loader(train_path)
         self.test_data_loader = dataset.test_loader(test_path)
         self.infer_data_loader = dataset.infer_loader(test_path)
+        #for i, (batch, label) in enumerate(self.train_data_loader):
+        #    if i < 3:
+        #        print(batch)
 
         self.model = model
         self.criterion = torch.nn.CrossEntropyLoss()
@@ -181,20 +189,28 @@ class PrunningFineTuner_VGG16:
         print("Finished fine tuning.")
 
     def train_batch(self, optimizer, batch, label, rank_filters):
-
+        #print(batch)
         # if args.use_cuda:
         #    batch = batch.cuda()
         #    label = label.cuda()
 
         self.model.zero_grad()
+        self.model.eval()
         input = Variable(batch)
 
         if rank_filters:
+            crit_s = time.time()
             output = self.prunner.forward(input)
+            print(output)
+
             self.criterion(output, Variable(label)).backward()
+            crit_e = time.time()
+            print(str((crit_e - crit_s)*1000))
         else:
             self.criterion(self.model(input), Variable(label)).backward()
             optimizer.step()
+
+        self.model.train()
 
     def train_epoch(self, optimizer=None, rank_filters=False):
         for i, (batch, label) in enumerate(self.train_data_loader):
@@ -246,8 +262,13 @@ class PrunningFineTuner_VGG16:
             print("Prunning filters.. ")
             prune_start = time.time()
             model = self.model.cpu()
+
             for layer_index, filter_index in prune_targets:
+                flt_prune_start = time.time()
                 model = prune_vgg16_conv_layer(model, layer_index, filter_index, use_cuda=False)
+                flt_prune_end = time.time()
+                #print("Prune: Layer: " + str(layer_index) + " Filter: " + str(filter_index) + " Time: " + str((flt_prune_end - flt_prune_start)*1000) + "ms")
+                print("" + str(layer_index) + "\t" + str(filter_index) + "\t" + str((flt_prune_end - flt_prune_start)*1000) + "")
 
             self.model = model
             # if args.use_cuda:

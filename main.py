@@ -22,6 +22,7 @@ def get_args():
     parser.add_argument("--prune", dest="prune", action="store_true")
     parser.add_argument("--test", dest="test", action="store_true")
     parser.add_argument("--infer", dest="infer", action="store_true")
+    parser.add_argument("--profile", dest="profile", action="store_true")
     parser.add_argument("--train_path", type=str, default="train")
     parser.add_argument("--test_path", type=str, default="test")
     parser.add_argument('--use-cuda', action='store_true', default=False, help='Use NVIDIA GPU acceleration')
@@ -31,6 +32,7 @@ def get_args():
     parser.set_defaults(prune=False)
     parser.set_defaults(test=False)
     parser.set_defaults(infer=False)
+    parser.set_defaults(profile=False)
     args = parser.parse_args()
     args.use_cuda = args.use_cuda and torch.cuda.is_available()
 
@@ -64,5 +66,5 @@ if __name__ == '__main__':
         fine_tuner.prune(args.prune_degree)
 
     elif args.test:
-        #fine_tuner.test()
+        fine_tuner.test()
         fine_tuner.infer()

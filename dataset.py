@@ -13,24 +13,24 @@ import glob
 import os
 
 
-def loader(path, batch_size=32, num_workers=4, pin_memory=True):
+def loader(path, batch_size=32, num_workers=1, pin_memory=True):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     return data.DataLoader(
         datasets.ImageFolder(path,
                              transforms.Compose([
                                  transforms.Scale(256),
-                                 transforms.RandomSizedCrop(224),
-                                 transforms.RandomHorizontalFlip(),
+                                 transforms.CenterCrop(224),
+                                 #transforms.RandomHorizontalFlip(),
                                  transforms.ToTensor(),
                                  normalize,
                              ])),
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
         num_workers=num_workers,
         pin_memory=pin_memory)
 
 
-def test_loader(path, batch_size=32, num_workers=4, pin_memory=True):
+def test_loader(path, batch_size=32, num_workers=1, pin_memory=True):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     return data.DataLoader(
         datasets.ImageFolder(path,
@@ -46,7 +46,7 @@ def test_loader(path, batch_size=32, num_workers=4, pin_memory=True):
         pin_memory=pin_memory)
 
 
-def infer_loader(path, batch_size=1, num_workers=4, pin_memory=True):
+def infer_loader(path, batch_size=1, num_workers=1, pin_memory=True):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     return data.DataLoader(
         datasets.ImageFolder(path,
